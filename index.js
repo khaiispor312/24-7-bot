@@ -1,10 +1,11 @@
 const mineflayer = require('mineflayer');
 const http = require('http');
+const dns = require('dns');
 
 // 1. TẠO WEB SERVER ĐỂ TREO 24/7 TRÊN RENDER
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot is Alive! MinhDucz SMP is running 24/7.');
+    res.end('Vertex Final is Online 24/7. Monitoring MinhDucz SMP...');
 });
 
 const PORT = process.env.PORT || 3000;
@@ -12,66 +13,103 @@ server.listen(PORT, () => {
     console.log(`Web server đang chạy tại port ${PORT}`);
 });
 
-// 2. CẤU HÌNH BOT MINECRAFT
-const botArgs = {
-    host: 'minhducz.play.hosting',
-    port: 25565, // Đảm bảo port này đúng với server của ông
-    username: 'Vertex',
-    version: '1.21.6' // Chỉnh đúng version server đang chạy
-};
+// 2. CẤU HÌNH BOT
+const DOMAIN = 'minhducz.play.hosting';
+const PASS = '12345678'; // Mật khẩu của ông
 
 let bot;
 
 function createBot() {
-    bot = mineflayer.createBot(botArgs);
+    // Tự động dò port để không bao giờ bị sai địa chỉ
+    dns.resolveSrv(`_minecraft._tcp.${DOMAIN}`, (err, addresses) => {
+        const finalPort = (!err && addresses.length > 0) ? addresses[0].port : 28610;
 
-    // Tự động đăng nhập AuthMe
-    bot.on('spawn', () => {
-        console.log('Bot đã vào server!');
-        bot.chat('/login 12345678'); // Thay mật khẩu của ông vào đây
-        loopMovement(); // Kích hoạt chế độ tăng động
+        bot = mineflayer.createBot({
+            host: DOMAIN,
+            port: finalPort,
+            username: 'Vertex2',
+            version: false, // Tự động khớp version server
+            hideErrors: true // Tránh spam lỗi làm tràn console Render
+        });
+
+        // 3. LOGIC AUTHME & CHAT (Register + Login)
+        bot.on('messagestr', (message) => {
+            const msg = message.toLowerCase();
+            if (msg.includes('/login') || msg.includes('đăng nhập')) {
+                bot.chat(`/login ${PASS}`);
+                console.log('🔑 Đã thực hiện Login.');
+            } else if (msg.includes('/register') || msg.includes('đăng ký')) {
+                bot.chat(`/register ${PASS} ${PASS}`);
+                console.log('📝 Đã thực hiện Register.');
+            }
+        });
+
+        bot.on('spawn', () => {
+            console.log(`🚀 Vertex đã hạ cánh tại port ${finalPort}!`);
+            // Đợi 5 giây cho server load rồi mới bắt đầu di chuyển
+            setTimeout(loopMovement, 5000);
+        });
+
+        // 4. LOGIC NGƯỜI THẬT (Mô phỏng 100%)
+        function randomMovement() {
+            if (!bot || !bot.entity) return;
+
+            const r = Math.random();
+            
+            // Player thật: Đi bộ, Nhảy, Sneak, Nhìn quanh
+            if (r < 0.4) {
+                // ĐI DẠO PHỨC TẠP
+                const yaw = Math.random() * Math.PI * 2;
+                bot.look(yaw, 0, true);
+                bot.setControlState('forward', true);
+                if (Math.random() > 0.7) bot.setControlState('jump', true);
+                
+                setTimeout(() => { if(bot) bot.clearControlStates(); }, Math.random() * 3000 + 1000);
+            } else if (r < 0.7) {
+                // SOI MAP (Nhìn lên xuống, xoay đầu như đang quan sát)
+                const targetYaw = Math.random() * Math.PI * 2;
+                const targetPitch = (Math.random() - 0.5) * 1;
+                bot.look(targetYaw, targetPitch, false);
+                
+                if (Math.random() > 0.8) {
+                    bot.setControlState('sneak', true);
+                    setTimeout(() => { if(bot) bot.setControlState('sneak', false); }, 800);
+                }
+            } else {
+                // ĐỨNG IM (Như đang đọc chat hoặc chỉnh setting)
+                bot.clearControlStates();
+            }
+        }
+
+        function loopMovement() {
+            if (!bot) return;
+            randomMovement();
+            // Thời gian nghỉ ngẫu nhiên từ 5-12 giây
+            const nextTick = Math.floor(Math.random() * 7000) + 5000;
+            setTimeout(loopMovement, nextTick);
+        }
+
+        // 5. CHỐNG SẬP (Auto Respawn & Retry)
+        bot.on('death', () => {
+            console.log('💀 Bot tử nạn, đang hồi sinh...');
+            setTimeout(() => { if(bot) bot.respawn(); }, 2000);
+        });
+
+        bot.on('end', (reason) => {
+            console.log(`🔄 Mất kết nối (${reason}). Thử lại sau 10s...`);
+            // Xóa bot cũ để giải phóng bộ nhớ trước khi tạo cái mới
+            bot = null;
+            setTimeout(createBot, 10000);
+        });
+
+        bot.on('error', (err) => {
+            console.log('⚠️ Lỗi Bot:', err.message);
+            if (err.code === 'ECONNREFUSED') {
+                console.log('❌ Server đang offline.');
+            }
+        });
     });
-
-    // Chế độ Tăng Động (Movement & Look)
-    function randomMovement() {
-        const actions = ['forward', 'back', 'left', 'right', 'jump'];
-        const randomAction = actions[Math.floor(Math.random() * actions.length)];
-        const randomTime = Math.floor(Math.random() * 1500) + 500;
-
-        bot.setControlState(randomAction, true);
-        
-        // Xoay đầu ngẫu nhiên
-        const yaw = Math.random() * Math.PI * 2;
-        const pitch = (Math.random() - 0.5) * Math.PI;
-        bot.look(yaw, pitch, false);
-
-        setTimeout(() => {
-            bot.clearControlStates();
-        }, randomTime);
-    }
-
-    function loopMovement() {
-        if (!bot) return;
-        randomMovement();
-        // Cứ mỗi 15-25 giây lại vận động một lần
-        const nextTick = Math.floor(Math.random() * 10000) + 15000;
-        setTimeout(loopMovement, nextTick);
-    }
-
-    // Tự động hồi sinh khi chết
-    bot.on('death', () => {
-        console.log('Bot bị tiêu diệt, đang hồi sinh...');
-        bot.respawn();
-    });
-
-    // Tự động kết nối lại khi bị văng (Crash/Kick)
-    bot.on('end', () => {
-        console.log('Bot bị mất kết nối, đang thử lại sau 10 giây...');
-        setTimeout(createBot, 10000);
-    });
-
-    bot.on('error', (err) => console.log('Lỗi Bot:', err));
 }
 
-// Chạy bot
+// KHỞI CHẠY HỆ THỐNG
 createBot();
