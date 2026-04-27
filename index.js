@@ -1,77 +1,93 @@
 const mineflayer = require('mineflayer');
 const http = require('http');
 
-// 1. TẠO WEB SERVER ĐỂ TREO 24/7 TRÊN RENDER
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot is Alive! MinhDucz SMP is running 24/7.');
-});
+// 1. WEB SERVER GIỮ BOT ONLINE 24/7 TRÊN RENDER
+http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end('Vertex System is Online');
+}).listen(process.env.PORT || 3000);
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Web server đang chạy tại port ${PORT}`);
-});
-
-// 2. CẤU HÌNH BOT MINECRAFT
+// 2. CẤU HÌNH (Ông thay đổi ở đây)
 const botArgs = {
-    host: 'minhducz.play.hosting',
-    port: 25565, // Đảm bảo port này đúng với server của ông
+    host: 'minhducz.play.hosting', 
+    port: 25565,                  
     username: 'Vertex',
-    version: '1.21.6' // Chỉnh đúng version server đang chạy
+    version: false,               // Để false để nó tự khớp với Paper 1.21.6
+    checkTimeoutInterval: 60000   // Tăng thời gian chờ để chống lag đường truyền
 };
 
-let bot;
+const PASSWORD = 'DucMinh2026@'; // Mật khẩu tự đặt
 
 function createBot() {
-    bot = mineflayer.createBot(botArgs);
+    const bot = mineflayer.createBot(botArgs);
 
-    // Tự động đăng nhập AuthMe
-    bot.on('spawn', () => {
-        console.log('Bot đã vào server!');
-        bot.chat('/login 12345678'); // Thay mật khẩu của ông vào đây
-        loopMovement(); // Kích hoạt chế độ tăng động
+    // 3. TỰ ĐỘNG REGISTER & LOGIN (Có độ trễ tránh bị kick)
+    bot.on('messagestr', (message) => {
+        const msg = message.toLowerCase();
+        
+        // Nếu thấy yêu cầu Login
+        if (msg.includes('/login') || msg.includes('đăng nhập')) {
+            setTimeout(() => {
+                bot.chat(`/login ${PASSWORD}`);
+                console.log('🔑 Đã gửi lệnh Login');
+            }, 2000); // Đợi 2 giây mới chat cho giống người
+        } 
+        
+        // Nếu thấy yêu cầu Register
+        else if (msg.includes('/register') || msg.includes('đăng ký')) {
+            setTimeout(() => {
+                bot.chat(`/register ${PASSWORD} ${PASSWORD}`);
+                console.log('📝 Đã gửi lệnh Register');
+            }, 2000);
+        }
     });
 
-    // Chế độ Tăng Động (Movement & Look)
-    function randomMovement() {
-        const actions = ['forward', 'back', 'left', 'right', 'jump'];
-        const randomAction = actions[Math.floor(Math.random() * actions.length)];
-        const randomTime = Math.floor(Math.random() * 1500) + 500;
+    bot.on('spawn', () => {
+        console.log('🚀 Vertex đã vào server thành công!');
+        startRandomMovement(bot);
+    });
 
-        bot.setControlState(randomAction, true);
+    // 4. LOGIC DI CHUYỂN TỰ ĐỘNG (Real Player)
+    function startRandomMovement(bot) {
+        if (!bot || !bot.entity) return;
+
+        const actions = ['forward', 'back', 'left', 'right', 'jump', 'sneak'];
+        const action = actions[Math.floor(Math.random() * actions.length)];
+        
+        // Thực hiện hành động
+        bot.setControlState(action, true);
         
         // Xoay đầu ngẫu nhiên
         const yaw = Math.random() * Math.PI * 2;
         const pitch = (Math.random() - 0.5) * Math.PI;
         bot.look(yaw, pitch, false);
 
+        // Giữ hành động trong 1-2 giây rồi dừng
         setTimeout(() => {
             bot.clearControlStates();
-        }, randomTime);
+            // Đợi 15-20 giây sau mới làm hành động tiếp theo cho đỡ lag
+            setTimeout(() => startRandomMovement(bot), Math.random() * 5000 + 15000);
+        }, Math.random() * 1000 + 1000);
     }
 
-    function loopMovement() {
-        if (!bot) return;
-        randomMovement();
-        // Cứ mỗi 15-25 giây lại vận động một lần
-        const nextTick = Math.floor(Math.random() * 10000) + 15000;
-        setTimeout(loopMovement, nextTick);
-    }
-
-    // Tự động hồi sinh khi chết
+    // 5. AUTO RESPAWN (1 GIÂY)
     bot.on('death', () => {
-        console.log('Bot bị tiêu diệt, đang hồi sinh...');
-        bot.respawn();
+        console.log('💀 Bot chết, đang hồi sinh sau 1s...');
+        setTimeout(() => {
+            if (bot) bot.respawn();
+        }, 1000);
     });
 
-    // Tự động kết nối lại khi bị văng (Crash/Kick)
-    bot.on('end', () => {
-        console.log('Bot bị mất kết nối, đang thử lại sau 10 giây...');
-        setTimeout(createBot, 10000);
+    // 6. AUTO RETRY DISCONNECT (5 GIÂY)
+    bot.on('end', (reason) => {
+        console.log(`🔄 Mất kết nối: ${reason}. Thử lại sau 5s...`);
+        setTimeout(createBot, 5000);
     });
 
-    bot.on('error', (err) => console.log('Lỗi Bot:', err));
+    bot.on('error', (err) => {
+        console.log('⚠️ Lỗi kết nối:', err.message);
+    });
 }
 
-// Chạy bot
+// Khởi chạy
 createBot();
