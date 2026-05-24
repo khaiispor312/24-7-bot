@@ -6,10 +6,9 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "^4.20.0"
+    "mineflayer": "^4.28.0"
   },
   "engines": {
     "node": ">=18.0.0"
   }
 }
-
