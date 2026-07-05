@@ -74,9 +74,9 @@ http.createServer((req, res) => {
 // 3. CẤU HÌNH CORE BOT (ANTI-LAG & ANTI-TIMEOUT)
 // ========================================================
 const botArgs = {
-    host: 'minhducz.play.hosting', 
+    host: 'khaiplace.play.hosting', 
     port: 25565,                  
-    username: 'dot', 
+    username: 'tod', 
     version: '1.21.11', 
     checkTimeoutInterval: 120000 // Tăng lên 2 phút để tránh rớt mạng ảo trên Cloud
 };
