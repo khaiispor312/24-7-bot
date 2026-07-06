@@ -77,7 +77,7 @@ const botArgs = {
     host: 'QHykai.play.hosting', 
     port: 25565,                  
     username: 'tod', 
-    version: '1.21.11', 
+    version: '1.21.6', 
     checkTimeoutInterval: 120000 // Tăng lên 2 phút để tránh rớt mạng ảo trên Cloud
 };
 
