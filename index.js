@@ -77,7 +77,7 @@ const botArgs = {
     host: 'ketkat.play.hosting', 
     port: 25565,                  
     username: 'tod', 
-    version: '1.21.11', 
+    version: '26.2', 
     checkTimeoutInterval: 120000 // Tăng lên 2 phút để tránh rớt mạng ảo trên Cloud
 };
 
