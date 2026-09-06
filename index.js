@@ -74,7 +74,7 @@ http.createServer((req, res) => {
 // 3. CẤU HÌNH CORE BOT (ANTI-LAG & ANTI-TIMEOUT)
 // ========================================================
 const botArgs = {
-    host: 'ketblock.seedloaf.gg', 
+    host: 'ketkat.play.hosting', 
     port: 25565,                  
     username: 'tod', 
     version: '1.21.11', 
