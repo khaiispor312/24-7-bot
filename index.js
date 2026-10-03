@@ -32,7 +32,7 @@ let updateInterval = null;
 let reconnectTimeout = null;
 
 // ========================================================
-// 2. WEB DASHBOARD SIÊU NGẮN GỌN (ĐẦY ĐỦ THÔNG TIN)
+// 2. WEB DASHBOARD SIÊU NGẮN GỌN
 // ========================================================
 const PORT = process.env.PORT || 3000;
 
@@ -40,16 +40,13 @@ http.createServer((req, res) => {
     try {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 
-        // Tính thời gian Uptime
         const uptime = Math.floor((Date.now() - startTime) / 1000);
         const h = Math.floor(uptime / 3600), m = Math.floor((uptime % 3600) / 60), s = uptime % 60;
 
-        // Tạo danh sách người chơi tối giản
         const playersList = botStatus.nearbyPlayers.length === 0 
             ? '<li>Không có ai xung quanh...</li>' 
             : botStatus.nearbyPlayers.map(p => `<li><b>${escapeHtml(p.name)}</b> (X: ${p.x}, Y: ${p.y}, Z: ${p.z})</li>`).join('');
 
-        // Trang HTML siêu nhẹ, tự làm mới sau 3 giây
         res.end(`<!DOCTYPE html>
 <html>
 <head>
@@ -86,7 +83,7 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // ========================================================
-// 3. CORE BOT ENGINE
+// 3. CORE BOT ENGINE (CHỐNG THROTTLE BẢO VỆ KẾT NỐI)
 // ========================================================
 function createBot() {
     if (botInstance) return;
@@ -131,12 +128,31 @@ function createBot() {
             setTimeout(() => { try { botInstance?.respawn(); } catch (e) {} }, 1000);
         });
 
-        bot.on('kicked', (reason) => { console.log('[BOT] Bị Kick:', reason); triggerReconnect(3000); });
-        bot.on('end', () => { console.log('[BOT] Kết nối đóng.'); triggerReconnect(3000); });
-        bot.on('error', (err) => { console.log('[BOT ERROR]:', err.message); triggerReconnect(3000); });
+        // XỬ LÝ CHỐNG THROTTLE / KICK
+        bot.on('kicked', (reason) => { 
+            console.log('[BOT] Bị Kick:', reason); 
+            const reasonStr = JSON.stringify(reason).toLowerCase();
+            
+            if (reasonStr.includes('throttled') || reasonStr.includes('wait')) {
+                console.log('[BOT] Phát hiện bị IP Throttled! Chờ 30s...');
+                triggerReconnect(30000);
+            } else {
+                triggerReconnect(15000);
+            }
+        });
+
+        bot.on('end', () => { 
+            console.log('[BOT] Kết nối đóng.'); 
+            triggerReconnect(15000); 
+        });
+
+        bot.on('error', (err) => { 
+            console.log('[BOT ERROR]:', err.message); 
+            triggerReconnect(15000); 
+        });
 
     } catch (e) {
-        triggerReconnect(3000);
+        triggerReconnect(15000);
     }
 }
 
@@ -176,7 +192,6 @@ function startSafeAntiAFK(bot) {
     afkInterval = setInterval(() => {
         if (!bot?.entity || !botInstance) return;
         try {
-            // Xoay đầu + vẫy tay
             bot.look((Math.random() * 360 - 180) * (Math.PI / 180), (Math.random() * 60 - 30) * (Math.PI / 180), true);
             bot.swingArm('mainhand');
             if (Math.random() < 0.3) {
